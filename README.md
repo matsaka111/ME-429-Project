@@ -47,5 +47,3 @@ All parameters are defined at the top of game.py:
 - B = 0.03: demand slope
 - C = 50: marginal cost (EUR/MWh)
 - Q_BAR = 1e5: per-player capacity
-
-These are anchored to three days of EPEX day-ahead Swiss market data. The slope B is held fixed across all values of alpha; the analysis is scale-invariant in q, so absolute MWh values for alpha != 1 are not interpretable as physical quantities.
