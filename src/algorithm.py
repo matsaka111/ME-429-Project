@@ -50,7 +50,7 @@ def jacobian_F(game, q):
     for i in range(N):
         for j in range(N):
             if i == j:
-                J[i, j] = -2 * Pp - q[i] * Ppp
+                J[i, j] = game.d2c_i(q[i]) -2 * Pp - q[i] * Ppp
             else:
                 J[i, j] = -Pp - q[i] * Ppp
     return J
