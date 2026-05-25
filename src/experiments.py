@@ -87,7 +87,7 @@ def E2_convergence_vs_N():
 # E3: Effect of alpha at fixed N
 # ---------------------------------------------------------------------------
 
-def E3_alpha_sweep():
+def E3_alpha_sweep_1():
     """
     Isolate the effect of demand curvature alpha on convergence,
     holding N fixed.
@@ -96,7 +96,7 @@ def E3_alpha_sweep():
     print("E3: Effect of demand curvature alpha at fixed N = 10")
     print("=" * 60)
     N = 10
-    alphas = [0.7, 1.0, 1.3, 1.5, 1.8, 2.0]
+    alphas = [0.5, 0.7, 1.0, 1.3, 1.5, 1.8, 2.0]
     fig, ax = plt.subplots(figsize=(7, 5))
     for alpha in alphas:
         game = CournotGame(N, alpha=alpha)
@@ -118,7 +118,43 @@ def E3_alpha_sweep():
     ax.set_ylabel("||q^t - q*||")
     style_convergence_axis(ax, f"E3: Convergence vs demand curvature, N = {N}")
     plt.tight_layout()
-    plt.savefig("E3_alpha_sweep.png", dpi=140)
+    plt.savefig("E3_alpha_sweep_1.png", dpi=140)
+    plt.close()
+
+
+
+def E3_alpha_sweep_2():
+    """
+    Isolate the effect of demand curvature alpha on convergence,
+    holding N fixed.
+    """
+    print("=" * 60)
+    print("E3: Effect of demand curvature alpha at fixed N = 100")
+    print("=" * 60)
+    N = 100
+    alphas = [0.5, 0.7, 1.0, 1.3, 1.5, 1.8, 2.0]
+    fig, ax = plt.subplots(figsize=(7, 5))
+    for alpha in alphas:
+        game = CournotGame(N, alpha=alpha)
+        gamma, mu, L = choose_step_size(game)
+        if gamma is None:
+            print(f"  alpha={alpha}  step-size FAILED")
+            continue
+        q_star = closed_form_NE(game)
+        if np.any(q_star > game.q_bar):
+            print(f"  alpha={alpha}  q* exceeds capacity, skipping")
+            continue
+        q0 = np.full(N, q_star[0] * 0.3)
+        traj = projected_pseudo_gradient(game, q0, gamma, T_max=5000)
+        tau_emp = empirical_rate(traj, q_star)
+        print(f"  alpha={alpha}  gamma={gamma:.3e}  tau={tau_emp:.4f}  "
+              f"iters={len(traj)-1}")
+        plot_convergence(ax, traj, q_star, label=f"alpha={alpha}",
+                         T_show=PLOT_WINDOWS.get(alpha, 2000))
+    ax.set_ylabel("||q^t - q*||")
+    style_convergence_axis(ax, f"E3: Convergence vs demand curvature, N = {N}")
+    plt.tight_layout()
+    plt.savefig("E3_alpha_sweep_2.png", dpi=140)
     plt.close()
 
 
@@ -136,7 +172,7 @@ def E4_phase_diagram_and_poa():
     print("=" * 60)
     Ns = [2, 5, 10, 20, 50, 100, 200]
     alphas_rate = np.linspace(0.4, 2.2, 10)
-    alphas_poa = [1.0, 1.25, 1.5, 1.75, 2.0]
+    alphas_poa = [0.5, 0.7, 1.0, 1.25, 1.5, 1.75, 2.0]
 
     # --- Contraction rates ---
     rates = np.full((len(alphas_rate), len(Ns)), np.nan)

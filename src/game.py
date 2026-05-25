@@ -80,63 +80,76 @@ class CournotGame:
 from scipy.optimize import brentq
 
 def closed_form_NE(game):
-    """
-    Symmetric Nash equilibrium. Each player's FOC is
-        c + beta * q - P(Nq) - q * P'(Nq) = 0.
-    Affine demand has a clean closed form; power-law needs numerical FOC.
-    """
     if game.a <= game.c:
         return np.zeros(game.N)
-    
+
     if game.alpha == 1.0:
-        # P(S) = a -bS, P'(S) = -b
-        q = (game.a - game.c)/((game.N + 1) * game.b + game.beta)
+        q = (game.a - game.c) / ((game.N + 1) * game.b + game.beta)
         return np.full(game.N, q)
-    
-    # Power law case, slove FOC numerically
+
     def foc(q):
         S = game.N * q
-        return game.dc_i(q) - game.P(S) - q*game.dP(S)
-    
-    # Search bracket: FOC is negative at q -> 0 and eventually positive
-    q_lo, q_hi = 1e-8, game.q_bar * 10
+        return game.dc_i(q) - game.P(S) - q * game.dP(S)
+
+    # Extend bracket until FOC changes sign, or give up
+    q_lo = 1e-8
+    q_hi = max(game.q_bar * 10, 1e6)
+    f_lo = foc(q_lo)
+    for _ in range(20):
+        f_hi = foc(q_hi)
+        if f_lo * f_hi < 0:
+            break
+        q_hi *= 10
+    else:
+        # No sign change found — unconstrained NE is enormous,
+        # equilibrium is on the boundary
+        return np.full(game.N, q_hi)
+
     try:
         q_star = brentq(foc, q_lo, q_hi, xtol=1e-10)
-    except ValueError:
-        #Bracket failed - FOC  has no sign change, equilibrium lies above.
-        #Return upper bound
-        return np.full(game.N, q_hi)
+    except Exception as e:
+        print(f"  [closed_form_NE] alpha={game.alpha} N={game.N} "
+              f"brentq failed unexpectedly: {type(e).__name__}: {e}")
+        q_star = q_hi
+    return np.full(game.N, q_star)
 
 
 def closed_form_social_opt(game):
-    """
-    Symmetric social optimum. Planner's FOC is
-        c + beta * q - P(Nq) - Nq * P'(Nq) = 0.
-    """
     if game.a <= game.c:
         return np.zeros(game.N)
 
     if game.alpha == 1.0:
-        #Affine: c + beta q - a + bNq + bNq = 0
-        q = (game.a - game.c)/(2* game.b * game.N + game.beta)
+        q = (game.a - game.c) / (2 * game.b * game.N + game.beta)
         return np.full(game.N, q)
-    
+
     def planner_foc(q):
         S = game.N * q
-        return game.dc_i(q) - game.P(S) - S*game.dP(S)
-    
-    q_lo, q_hi = 1e-8, game.q_bar * 10
-    try:
-        q_opt = brentq(planner_foc, q_lo, q_hi, xtol=1e-10)
-    except ValueError:
+        return game.dc_i(q) - game.P(S) - S * game.dP(S)
+
+    q_lo = 1e-8
+    q_hi = max(game.q_bar * 10, 1e6)
+    f_lo = planner_foc(q_lo)
+    for _ in range(20):
+        f_hi = planner_foc(q_hi)
+        if f_lo * f_hi < 0:
+            break
+        q_hi *= 10
+    else:
         return np.full(game.N, q_hi)
 
+    try:
+        q_opt = brentq(planner_foc, q_lo, q_hi, xtol=1e-10)
+    except Exception as e:
+        print(f"  [closed_form_social_opt] alpha={game.alpha} N={game.N} "
+              f"brentq failed unexpectedly: {type(e).__name__}: {e}")
+        q_opt = q_hi
+    return np.full(game.N, q_opt)
 
 
 def total_loss(game, q):
     """J(q) = sum_i [c_i(q_i) - q_i * P(S)]."""
     S = q.sum()
-    return sum(game.c * q[i] - q[i] * game.P(S) for i in range(game.N))
+    return sum(game.c_i(q[i]) - q[i] * game.P(S) for i in range(game.N))
 
 
 def price_of_anarchy(game):
